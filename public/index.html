@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAN Network Scanner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>LAN Network Scanner</h1>
+        <button id="scanButton">Scan Network</button>
+        <div id="status"></div>
+        
+        <!-- Table to display the devices -->
+        <table id="nodeTable" border="1">
+            <thead>
+                <tr>
+                    <th>IP Address</th>
+                    <th>Device Name</th>
+                    <th>MAC Address</th>
+                </tr>
+            </thead>
+            <tbody id="nodeList"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // Function to trigger the network scan when the button is clicked
+        document.getElementById('scanButton').addEventListener('click', function() {
+            // Display the scanning status
+            document.getElementById('status').innerText = "Scanning for devices...";
+            document.getElementById('nodeList').innerHTML = ''; // Clear previous results
+
+            // Fetch the list of online devices from the server
+            fetch('http://localhost:3000/scan')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('status').innerText = `Found ${data.length} devices`;
+                    const nodeList = document.getElementById('nodeList');
+                    data.forEach(node => {
+                        const tr = document.createElement('tr');
+
+                        const tdIp = document.createElement('td');
+                        tdIp.innerText = node.ip;
+
+                        const tdName = document.createElement('td');
+                        tdName.innerText = node.name;
+
+                        const tdMac = document.createElement('td');
+                        tdMac.innerText = node.mac;
+
+                        tr.appendChild(tdIp);
+                        tr.appendChild(tdName);
+                        tr.appendChild(tdMac);
+                        nodeList.appendChild(tr);
+                    });
+                })
+                .catch(error => {
+                    document.getElementById('status').innerText = "Error scanning network!";
+                });
+        });
+    </script>
+</body>
+</html>

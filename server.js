@@ -9,6 +9,12 @@ const cors = require('cors');
 const app = express();
 const port = 3000;
 
+
+const dns = require('dns');
+const os = require('os'); // You can use this if the node provides a hostname
+const exec2 = require('child_process').exec;
+
+
 // Enable CORS for all routes
 app.use(cors());
 
@@ -50,6 +56,34 @@ function getMacAddress(ipAddress) {
           }
       });
   });
+}
+
+// Function to get a more meaningful name for the device
+function getDeviceName(ipAddress) {
+    return new Promise((resolve, reject) => {
+        // First, try to resolve the IP address with DNS reverse lookup
+        dns.reverse(ipAddress, (err, hostnames) => {
+            if (err || !hostnames || hostnames.length === 0) {
+                // If reverse DNS lookup fails, try pinging the device to get its hostname
+                exec2(`ping -a ${ipAddress}`, (error, stdout, stderr) => {
+                    if (error || stderr) {
+                        resolve(`Unknown Device (${ipAddress})`);
+                    } else {
+                        // Extract the hostname from the ping response (if possible)
+                        const match = stdout.match(/([a-zA-Z0-9.-]+)\s+\[.*\]/);
+                        if (match && match[1]) {
+                            resolve(match[1]);
+                        } else {
+                            resolve(`Unknown Device (${ipAddress})`);
+                        }
+                    }
+                });
+            } else {
+                // Return the first hostname found
+                resolve(hostnames[0]);
+            }
+        });
+    });
 }
 
 // Function to check and notify on network changes with 10s delay tracking
@@ -106,7 +140,7 @@ async function monitorNetwork() {
   }
 }
 
-// Monitor network every 30 seconds
+// Monitor network every 30 seconds 
 setInterval(monitorNetwork, 300000);
 
 // API endpoint to scan the network
@@ -127,10 +161,11 @@ app.get('/scan', async (req, res) => {
           if (result.alive) {
               const macAddress = await getMacAddress(result.host);
               // console.log(`MAC for ${result.host}:`, macAddress);  // Log MAC address
+              const deviceName = await getDeviceName(result.host);
               onlineNodes.push({
                   ip: result.host,
                   mac: macAddress || 'Not Available', // Handle cases with no MAC address
-                  name: `Device at ${result.host}` // Default name
+                  name: deviceName // Set the resolved device name
               });
           }
       }
